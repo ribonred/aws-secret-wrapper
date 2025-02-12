@@ -1,0 +1,41 @@
+name: Test AWS Secrets Wrapper
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Test AWS Secrets Wrapper Action
+        id: wrapper
+        uses: ./
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+          aws_region: 'ap-southeast-3'
+
+      - name: Build test container
+        run: |
+          cat > Dockerfile.test <<EOF
+          FROM python:3.9-slim
+          COPY ${{ steps.wrapper.outputs.binary }} /usr/local/bin/aws-secret-wrapper
+          COPY test-app.py .
+          ENTRYPOINT ["aws-secret-wrapper", "--secret-id", "wowo", "--"]
+          CMD ["python", "test-app.py"]
+          EOF
+          
+          cat > test-app.py <<EOF
+          import os
+          print("Environment variables:")
+          for key, value in os.environ.items():
+              print(f"{key}={value}")
+          EOF
+          
+          docker build -t test-app -f Dockerfile.test .
+          docker run --rm test-app

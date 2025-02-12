@@ -20,7 +20,7 @@ A command-line tool that injects AWS Secrets Manager secrets as environment vari
 1. **Clone and Build**
    ```bash
    git clone [repository-url]
-   cd s3-secret-wrapper
+   cd aws-secret-wrapper
    cargo build --release
    ```
 
@@ -42,38 +42,38 @@ A command-line tool that injects AWS Secrets Manager secrets as environment vari
 
 Basic syntax:
 ```bash
-s3-secret-wrapper --secret-id <SECRET_ID> -- <COMMAND> [ARGS...]
+aws-secret-wrapper --secret-id <SECRET_ID> -- <COMMAND> [ARGS...]
 ```
 
 support multiple secret ids with comma separated values:
 ```bash
-s3-secret-wrapper --secret-id <SECRET_ID1>,<SECRET_ID2> -- <COMMAND> [ARGS...]
+aws-secret-wrapper --secret-id <SECRET_ID1>,<SECRET_ID2> -- <COMMAND> [ARGS...]
 ```
 
 support change region:
 ```bash
-s3-secret-wrapper --secret-id <SECRET_ID> --region <REGION> -- <COMMAND> [ARGS...]
+aws-secret-wrapper --secret-id <SECRET_ID> --region <REGION> -- <COMMAND> [ARGS...]
 ```
 
 ### Examples
 
 1. **Run a Node.js app**
    ```bash
-   ./target/release/s3-secret-wrapper --secret-id dev/myapp/secrets -- node app.js
+   ./target/release/aws-secret-wrapper --secret-id dev/myapp/secrets -- node app.js
    ```
 
 2. **Run with arguments**
    ```bash
-   ./target/release/s3-secret-wrapper --secret-id dev/myapp/secrets -- npm start --port 3000
+   ./target/release/aws-secret-wrapper --secret-id dev/myapp/secrets -- npm start --port 3000
    ```
 
 3. **Run Python script**
    ```bash
-   ./target/release/s3-secret-wrapper --secret-id dev/myapp/secrets -- python script.py arg1 arg2
+   ./target/release/aws-secret-wrapper --secret-id dev/myapp/secrets -- python script.py arg1 arg2
    ```
 4. **Run with linux runtime**
    ```bash
-   ./target/release/s3-secret-wrapper --secret-id <SECRET_ID> -- printenv | grep YOUR_SECRET_KEY
+   ./target/release/aws-secret-wrapper --secret-id <SECRET_ID> -- printenv | grep YOUR_SECRET_KEY
    ```
 
 ### Secret Format
@@ -123,6 +123,42 @@ cargo fmt
 
 # Check for errors
 cargo check
+```
+
+## 🐳 Using in Docker Builds
+
+When using this tool as a GitHub Action, you can copy the binary directly from the action's build stage in your Dockerfile:
+
+```dockerfile
+# Use ARG to accept the build stage name from docker build command
+ARG WRAPPER_STAGE
+# In your Dockerfile, after using the aws-secret-wrapper action:
+COPY --from=${WRAPPER_STAGE} /usr/local/bin/aws-secret-wrapper /usr/local/bin/
+
+# Then use it in your application
+ENTRYPOINT ["aws-secret-wrapper", "--secret-id", "your-secret-id", "--"]
+CMD ["your-application"]
+```
+
+Example workflow:
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      # First use the aws-secret-wrapper action
+      - id: wrapper
+        uses: ribonred/aws-secret-wrapper@main
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+          aws_region: us-east-1
+
+      # Then build your Docker image - pass the stage name from action output
+      - name: Build application image
+        run: docker build --build-arg WRAPPER_STAGE=${{ steps.wrapper.outputs.docker_target }} -t myapp .
 ```
 
 ## 📜 License

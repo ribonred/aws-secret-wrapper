@@ -1,5 +1,5 @@
 [package]
-name = "s3-secret-wrapper"
+name = "aws-secret-wrapper"
 version = "0.1.0"
 edition = "2021"
 

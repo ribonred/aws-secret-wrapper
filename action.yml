@@ -1,0 +1,25 @@
+name: "aws-secrets-wrapper"
+description: "injects aws-secrets-wrapper into the workflow, provides binary for Docker builds via target 'aws-secrets-wrapper:builder'"
+inputs:
+  aws_access_key:
+    description: "aws access key"
+    required: true
+  aws_secret_key:
+    description: "aws secret key"
+    required: true
+  aws_region:
+    description: "aws region"
+    required: true
+outputs:
+  binary:
+    description: "Path to the aws-secrets-wrapper binary"
+  docker_target:
+    description: "Docker target to use in COPY --from statement"
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.aws_access_key }}
+    - ${{ inputs.aws_secret_key }}
+    - ${{ inputs.aws_region }}
+
