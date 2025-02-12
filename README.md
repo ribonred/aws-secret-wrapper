@@ -49,17 +49,21 @@ s3-secret-wrapper --secret-id <SECRET_ID> -- <COMMAND> [ARGS...]
 
 1. **Run a Node.js app**
    ```bash
-   s3-secret-wrapper --secret-id dev/myapp/secrets -- node app.js
+   ./target/release/s3-secret-wrapper --secret-id dev/myapp/secrets -- node app.js
    ```
 
 2. **Run with arguments**
    ```bash
-   s3-secret-wrapper --secret-id dev/myapp/secrets -- npm start --port 3000
+   ./target/release/s3-secret-wrapper --secret-id dev/myapp/secrets -- npm start --port 3000
    ```
 
 3. **Run Python script**
    ```bash
-   s3-secret-wrapper --secret-id dev/myapp/secrets -- python script.py arg1 arg2
+   ./target/release/s3-secret-wrapper --secret-id dev/myapp/secrets -- python script.py arg1 arg2
+   ```
+4. **Run with linux runtime**
+   ```bash
+   ./target/release/s3-secret-wrapper --secret-id <SECRET_ID> -- printenv | grep YOUR_SECRET_KEY
    ```
 
 ### Secret Format
