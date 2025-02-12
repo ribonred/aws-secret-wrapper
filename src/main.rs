@@ -74,15 +74,22 @@ async fn main() -> Result<()> {
     let settings = Settings::new()?;
     let cli = Cli::parse();
     let getter = AwsSecretGetter::new(settings).await?;
-    let secrets = getter.get_secrets(&cli.secret_id).await?;
+    let secret_ids = if cli.secret_id.contains(',') {
+        cli.secret_id.split(',').map(|s| s.to_string()).collect()
+    } else {
+        vec![cli.secret_id.clone()]
+    };
+    for secret_id in secret_ids {
+        let secrets = getter.get_secrets(&secret_id).await?;
 
-    // Set environment variables from secrets
-    for (key, value) in secrets
-        .as_object()
-        .ok_or_else(|| anyhow::anyhow!("Secret is not a JSON object"))?
-    {
-        if let Some(value_str) = value.as_str() {
-            std::env::set_var(key, value_str);
+        // Set environment variables from secrets
+        for (key, value) in secrets
+            .as_object()
+            .ok_or_else(|| anyhow::anyhow!("Secret is not a JSON object"))?
+        {
+            if let Some(value_str) = value.as_str() {
+                std::env::set_var(key, value_str);
+            }
         }
     }
 
@@ -93,5 +100,8 @@ async fn main() -> Result<()> {
         .envs(std::env::vars())
         .status()?;
 
-    std::process::exit(status.code().unwrap_or(1));
+    std::process::exit(status.code().unwrap_or_else(|| {
+        eprintln!("Process terminated by signal");
+        1
+    }));
 }

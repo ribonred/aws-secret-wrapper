@@ -45,6 +45,11 @@ Basic syntax:
 s3-secret-wrapper --secret-id <SECRET_ID> -- <COMMAND> [ARGS...]
 ```
 
+support multiple secret ids with comma separated values:
+```bash
+s3-secret-wrapper --secret-id <SECRET_ID1>,<SECRET_ID2> -- <COMMAND> [ARGS...]
+```
+
 ### Examples
 
 1. **Run a Node.js app**
