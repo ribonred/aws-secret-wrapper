@@ -67,12 +67,18 @@ struct Cli {
     secret_id: String,
     #[arg(last = true)]
     command: Vec<String>,
+    #[arg(long)]
+     /// if supplied set or change the AWS region
+    region: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let settings = Settings::new()?;
+    let mut settings = Settings::new()?;
     let cli = Cli::parse();
+    if let Some(region) = cli.region {
+        settings.aws_region = region;
+    }
     let getter = AwsSecretGetter::new(settings).await?;
     let secret_ids = if cli.secret_id.contains(',') {
         cli.secret_id.split(',').map(|s| s.to_string()).collect()

@@ -50,6 +50,11 @@ support multiple secret ids with comma separated values:
 s3-secret-wrapper --secret-id <SECRET_ID1>,<SECRET_ID2> -- <COMMAND> [ARGS...]
 ```
 
+support change region:
+```bash
+s3-secret-wrapper --secret-id <SECRET_ID> --region <REGION> -- <COMMAND> [ARGS...]
+```
+
 ### Examples
 
 1. **Run a Node.js app**
