@@ -1,5 +1,9 @@
 name: "aws-secrets-wrapper"
 description: "injects aws-secrets-wrapper into the workflow, provides binary for Docker builds via target 'aws-secrets-wrapper:builder'"
+author: ribonred <ribonred@gmail.com>
+branding:
+  icon: "layers"
+  color: "orange"
 inputs:
   aws_access_key:
     description: "aws access key"
@@ -22,4 +26,3 @@ runs:
     - ${{ inputs.aws_access_key }}
     - ${{ inputs.aws_secret_key }}
     - ${{ inputs.aws_region }}
-

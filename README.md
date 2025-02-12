@@ -1,5 +1,9 @@
 # AWS Secrets Manager Wrapper
 
+<p align="center">
+  <img src="bg.png" alt="AWS Secrets Manager Wrapper Logo" width="200">
+</p>
+
 A command-line tool that injects AWS Secrets Manager secrets as environment variables for your applications.
 
 ## 🚀 Features
