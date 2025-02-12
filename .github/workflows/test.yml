@@ -24,9 +24,8 @@ jobs:
         run: |
           cat > Dockerfile.test <<EOF
           FROM python:3.9-slim
-          COPY ${{ steps.wrapper.outputs.binary }} /usr/local/bin/aws-secret-wrapper
-          COPY test-app.py .
-          ENTRYPOINT ["aws-secret-wrapper", "--secret-id", "wowo", "--"]
+          COPY . .
+          ENTRYPOINT ["./aws-secret-wrapper", "--secret-id", "wowo", "--"]
           CMD ["python", "test-app.py"]
           EOF
           

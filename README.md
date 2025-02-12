@@ -127,38 +127,34 @@ cargo check
 
 ## 🐳 Using in Docker Builds
 
-When using this tool as a GitHub Action, you can copy the binary directly from the action's build stage in your Dockerfile:
+There are two main ways to use this tool in Docker:
 
-```dockerfile
-# Use ARG to accept the build stage name from docker build command
-ARG WRAPPER_STAGE
-# In your Dockerfile, after using the aws-secret-wrapper action:
-COPY --from=${WRAPPER_STAGE} /usr/local/bin/aws-secret-wrapper /usr/local/bin/
+### 1. Using as a GitHub Action (Recommended for CI/CD)
 
-# Then use it in your application
-ENTRYPOINT ["aws-secret-wrapper", "--secret-id", "your-secret-id", "--"]
-CMD ["your-application"]
+When using this tool as a GitHub Action, the binary will be automatically copied to your workspace. This means when you do `COPY . .` in your Dockerfile, the `aws-secret-wrapper` binary will already be in your build context.
+
+Example workflow and Dockerfile usage:
+
+```yaml
+# Your GitHub workflow
+steps:
+  - uses: actions/checkout@v3
+  - uses: ribonred/aws-secret-wrapper@main
+    with:
+      aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+      aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+      aws_region: 'us-east-1'
 ```
 
-Example workflow:
-```yaml
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      
-      # First use the aws-secret-wrapper action
-      - id: wrapper
-        uses: ribonred/aws-secret-wrapper@main
-        with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
-          aws_region: us-east-1
-
-      # Then build your Docker image - pass the stage name from action output
-      - name: Build application image
-        run: docker build --build-arg WRAPPER_STAGE=${{ steps.wrapper.outputs.docker_target }} -t myapp .
+```dockerfile
+# Your application's Dockerfile
+FROM python:3.9-slim
+# Copy your application code including the aws-secret-wrapper binary
+COPY . .
+# The binary will be available in your application directory
+# you can do as follow
+ENTRYPOINT ["./aws-secret-wrapper", "--secret-id", "your-secret-id", "--"]
+CMD ["python", "app.py"]
 ```
 
 ## 📜 License

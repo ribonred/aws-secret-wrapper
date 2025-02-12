@@ -3,11 +3,11 @@ set -e  # Exit on error
 
 # First build our action's Docker image
 echo "Building action image..."
-docker build -t s3-secrets-wrapper-action .
+docker build -t aws-secrets-wrapper-action .
 
 # Create test environment variables
-# export AWS_ACCESS_KEY="xxxx"
-# export AWS_SECRET_KEY="xxxx"
+export AWS_ACCESS_KEY="xx"
+export AWS_SECRET_KEY="xx"
 export AWS_REGION="ap-southeast-3"
 export GITHUB_OUTPUT=$(pwd)/github_output
 touch $GITHUB_OUTPUT
@@ -23,16 +23,15 @@ docker run --rm \
   -e GITHUB_OUTPUT=$GITHUB_OUTPUT \
   -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
   -v $GITHUB_OUTPUT:$GITHUB_OUTPUT \
-  s3-secrets-wrapper-action \
+  aws-secrets-wrapper-action \
   "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$AWS_REGION"
 
 # Now test using the binary in a sample app build
 echo "Testing binary usage in app build..."
 cat > $GITHUB_WORKSPACE/Dockerfile <<EOF
 FROM python:3.9-slim
-COPY --from=s3-secrets-wrapper-action:latest /usr/local/bin/aws-secret-wrapper /usr/local/bin/
-COPY app.py .
-ENTRYPOINT ["aws-secret-wrapper", "--secret-id", "wowo", "--"]
+COPY . .
+ENTRYPOINT ["./aws-secret-wrapper", "--secret-id", "wowo", "--"]
 CMD ["python", "app.py"]
 EOF
 
