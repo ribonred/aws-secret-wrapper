@@ -9,7 +9,23 @@ use aws_config::Region;
 use aws_sdk_secretsmanager::config::Credentials;
 use aws_sdk_secretsmanager::{Client, Config};
 use clap::Parser;
+use colored::Colorize;
 use std::process::Command;
+
+fn print_banner() {
+    println!(
+        "{}",
+        r#"
+ ___  ___  ___ _ __ ___| |_    __      ___ __ __ _ _ __  _ __   ___ _ __ 
+/ __|/ _ \/ __| '__/ _ \ __|   \ \ /\ / / '__/ _` | '_ \| '_ \ / _ \ '__|
+\__ \  __/ (__| | |  __/ |_     \ V  V /| | | (_| | |_) | |_) |  __/ |   
+|___/\___|\___|_|  \___|\__|     \_/\_/ |_|  \__,_| .__/| .__/ \___|_|   
+                                                   |_|   |_|              
+"#
+        .cyan()
+        .bold()
+    );
+}
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -54,7 +70,7 @@ impl SecretGetter for AwsSecretGetter {
 
         let secret_string = secret
             .secret_string()
-            .ok_or_else(|| anyhow::anyhow!("Secret string is empty"))?;
+            .ok_or_else(|| anyhow::anyhow!("Secret string is empty".red()))?;
 
         let secrets: serde_json::Value = serde_json::from_str(&secret_string)?;
         Ok(secrets)
@@ -68,14 +84,20 @@ struct Cli {
     #[arg(last = true)]
     command: Vec<String>,
     #[arg(long)]
-     /// if supplied set or change the AWS region
+    /// if supplied set or change the AWS region
     region: Option<String>,
+    #[arg(long, default_value_t = false)]
+    // print fancy banner and available secret keys
+    fancy: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut settings = Settings::new()?;
     let cli = Cli::parse();
+    if cli.fancy {
+        print_banner();
+    }
     if let Some(region) = cli.region {
         settings.aws_region = region;
     }
@@ -87,13 +109,23 @@ async fn main() -> Result<()> {
     };
     for secret_id in secret_ids {
         let secrets = getter.get_secrets(&secret_id).await?;
-
+        if cli.fancy {
+            println!(
+                "{}{}{}",
+                "[".bold().bright_white(),
+                secret_id.to_uppercase().bright_green(),
+                "]".bold().bright_white()
+            );
+        }
         // Set environment variables from secrets
         for (key, value) in secrets
             .as_object()
-            .ok_or_else(|| anyhow::anyhow!("Secret is not a JSON object"))?
+            .ok_or_else(|| anyhow::anyhow!("Secret is not a JSON object".red()))?
         {
             if let Some(value_str) = value.as_str() {
+                if cli.fancy {
+                    println!("{}={}", key.bright_magenta(), "****".red());
+                }
                 std::env::set_var(key, value_str);
             }
         }
