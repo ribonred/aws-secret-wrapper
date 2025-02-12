@@ -138,7 +138,7 @@ Example workflow and Dockerfile usage:
 ```yaml
 # Your GitHub workflow
 steps:
-  - uses: actions/checkout@v3
+  - uses: actions/checkout@v1.0.2
   - uses: ribonred/aws-secret-wrapper@main
     with:
       aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
