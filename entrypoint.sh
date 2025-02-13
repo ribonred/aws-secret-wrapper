@@ -14,9 +14,3 @@ echo "binary=${GITHUB_WORKSPACE}/aws-secret-wrapper" >> "${GITHUB_OUTPUT}" || {
     echo "Warning: Could not write to GITHUB_OUTPUT at ${GITHUB_OUTPUT}"
     exit 1
 }
-
-# set the builder image
-echo "docker_target=builder" >> "${GITHUB_OUTPUT}" || {
-    echo "Warning: Could not write to GITHUB_OUTPUT at ${GITHUB_OUTPUT}"
-    exit 1
-}

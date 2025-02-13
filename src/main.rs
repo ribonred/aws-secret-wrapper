@@ -3,7 +3,7 @@ mod config;
 mod tests;
 
 use crate::config::Settings;
-use anyhow::Result;
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use aws_config::Region;
 use aws_sdk_secretsmanager::config::Credentials;
@@ -79,8 +79,10 @@ impl SecretGetter for AwsSecretGetter {
 
 #[derive(Parser)]
 struct Cli {
-    #[arg(long)]
-    secret_id: String,
+    #[arg(long, required_unless_present = "sf")]
+    secret_id: Option<String>,
+    #[arg(long, required_unless_present = "secret_id")]
+    sf: Option<String>,
     #[arg(last = true)]
     command: Vec<String>,
     #[arg(long)]
@@ -102,10 +104,21 @@ async fn main() -> Result<()> {
         settings.aws_region = region;
     }
     let getter = AwsSecretGetter::new(settings).await?;
-    let secret_ids = if cli.secret_id.contains(',') {
-        cli.secret_id.split(',').map(|s| s.to_string()).collect()
-    } else {
-        vec![cli.secret_id.clone()]
+
+    let secret_ids = {
+        if let Some(secret_ids) = &cli.secret_id {
+            let ids: Vec<String> = secret_ids.split(',').map(|s| s.to_string()).collect();
+            ids
+        } else if let Some(secret_file) = &cli.sf {
+            let ids = std::fs::read_to_string(secret_file)
+                .expect(format!("Could not read file {}", secret_file).as_str())
+                .lines()
+                .map(|s| s.to_string())
+                .collect();
+            ids
+        } else {
+            return Err(Error::msg("No secret id provided"));
+        }
     };
     for secret_id in secret_ids {
         let secrets = getter.get_secrets(&secret_id).await?;

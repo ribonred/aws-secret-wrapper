@@ -17,8 +17,6 @@ inputs:
 outputs:
   binary:
     description: "Path to the aws-secrets-wrapper binary"
-  docker_target:
-    description: "Docker target to use in COPY --from statement"
 runs:
   using: "docker"
   image: "Dockerfile"
