@@ -24,4 +24,4 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          make TAG=${{ github.event.release.tag_name }}
+          make TAG=${{ github.event.release.tag_name }} build push
