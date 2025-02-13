@@ -143,12 +143,18 @@ Example workflow and Dockerfile usage:
 # Your GitHub workflow
 steps:
   - uses: actions/checkout@v1.0.5
-  - uses: ribonred/aws-secret-wrapper@main
+  - uses: ribonred/aws-secret-wrapper@v1.0.6-e
     with:
       aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
       aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
       aws_region: 'us-east-1'
+   - name: Build and push Docker image
+       run: |
+          docker build -t myapp .
+          docker push myapp
 ```
+
+assuming your dockerfile is like this:
 
 ```dockerfile
 # Your application's Dockerfile

@@ -14,12 +14,16 @@ inputs:
   aws_region:
     description: "aws region"
     required: true
+  versions:
+    description: "Docker image tag"
+    required: false
+    default: "latest"
 outputs:
   binary:
     description: "Path to the aws-secrets-wrapper binary"
 runs:
   using: "docker"
-  image: "Dockerfile"
+  image: "ghcr.io/ribonred/s3-secret-wrapper:${{ inputs.versions }}"
   args:
     - ${{ inputs.aws_access_key }}
     - ${{ inputs.aws_secret_key }}
