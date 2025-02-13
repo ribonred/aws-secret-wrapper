@@ -1,4 +1,4 @@
-IMAGE_NAME := ghcr.io/ribonred/s3-secret-wrapper
+IMAGE_NAME := ghcr.io/ribonred/aws-secret-wrapper
 TAG := latest
 
 .PHONY: build push

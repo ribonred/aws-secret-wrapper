@@ -23,7 +23,7 @@ outputs:
     description: "Path to the aws-secrets-wrapper binary"
 runs:
   using: "docker"
-  image: "ghcr.io/ribonred/s3-secret-wrapper:${{ inputs.versions }}"
+  image: "ghcr.io/ribonred/aws-secret-wrapper:${{ inputs.versions }}"
   args:
     - ${{ inputs.aws_access_key }}
     - ${{ inputs.aws_secret_key }}
