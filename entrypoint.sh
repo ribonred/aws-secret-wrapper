@@ -4,7 +4,6 @@ set -e
 
 # Get the directory where the script is located
 SCRIPT_DIR="/app"
-printenv
 # Change to the action directory where Cargo.toml is located
 cd "${SCRIPT_DIR}"
 # Check if required inputs are not empty
