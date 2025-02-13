@@ -138,15 +138,18 @@ There are two main ways to use this tool in Docker:
 When using this tool as a GitHub Action, the binary will be automatically copied to your workspace. This means when you do `COPY . .` in your Dockerfile, the `aws-secret-wrapper` binary will already be in your build context.
 
 Example workflow and Dockerfile usage:
+## ⚠️ Important Notes
+
+- is not going to work github restriction if using `secrets.AWS_ACCESS_KEY` should use `env.XXX` by this github is masking the value and safe to pass into action
 
 ```yaml
 # Your GitHub workflow
 steps:
   - uses: actions/checkout@v1.0.5
-  - uses: ribonred/aws-secret-wrapper@v1.0.6-e
+  - uses: ribonred/aws-secret-wrapper@v1.0.7
     with:
-      aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
-      aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+      aws_access_key: ${{ env.AWS_ACCESS_KEY }}
+      aws_secret_key: ${{ env.AWS_SECRET_KEY }}
       aws_region: 'us-east-1'
    - name: Build and push Docker image
        run: |
