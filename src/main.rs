@@ -11,6 +11,12 @@ use aws_sdk_secretsmanager::{Client, Config};
 use clap::Parser;
 use colored::Colorize;
 use std::process::Command;
+use std::fs;
+use std::path::Path;
+use aes_gcm::{Aes256Gcm, Key, Nonce, KeyInit};
+use aes_gcm::aead::{Aead, OsRng};
+use base64::{Engine as _, engine::general_purpose};
+use rand::RngCore;
 
 fn print_banner() {
     println!(
@@ -34,9 +40,106 @@ pub trait SecretGetter {
     where
         Self: Sized;
     async fn get_secrets(&self, secret_id: &str) -> Result<serde_json::Value>;
+    async fn set_secret_cache(&self, secret_id: &str, content: &str);
+    async fn get_secret_cache(&self, secret_id: &str) -> Result<serde_json::Value>;
 }
 struct AwsSecretGetter {
     client: Client,
+    encryption_key: [u8; 32],
+}
+
+const CACHE_DIR: &str = "/tmp/wrapper/cache";
+const KEY_FILE: &str = "/tmp/wrapper/encryption.key";
+
+impl AwsSecretGetter {
+    fn ensure_directories() -> Result<()> {
+        let wrapper_dir = "/tmp/wrapper";
+        if !Path::new(wrapper_dir).exists() {
+            fs::create_dir_all(wrapper_dir)?;
+        }
+        if !Path::new(CACHE_DIR).exists() {
+            fs::create_dir_all(CACHE_DIR)?;
+        }
+        Ok(())
+    }
+
+    fn load_or_create_key() -> Result<[u8; 32]> {
+        Self::ensure_directories()?;
+        
+        if Path::new(KEY_FILE).exists() {
+            // Load existing key
+            let key_data = fs::read(KEY_FILE)?;
+            if key_data.len() != 32 {
+                return Err(anyhow::anyhow!("Invalid key file length"));
+            }
+            let mut key = [0u8; 32];
+            key.copy_from_slice(&key_data);
+            Ok(key)
+        } else {
+            // Create new key
+            let mut key = [0u8; 32];
+            OsRng.fill_bytes(&mut key);
+            fs::write(KEY_FILE, &key)?;
+            Ok(key)
+        }
+    }
+
+    fn clear_cache() -> Result<()> {
+        if Path::new(CACHE_DIR).exists() {
+            for entry in fs::read_dir(CACHE_DIR)? {
+                let entry = entry?;
+                if entry.file_type()?.is_file() {
+                    fs::remove_file(entry.path())?;
+                }
+            }
+        }
+        
+        // Also remove the encryption key for better security
+        if Path::new(KEY_FILE).exists() {
+            fs::remove_file(KEY_FILE)?;
+        }
+        
+        Ok(())
+    }
+
+    fn encrypt_content(&self, content: &str) -> Result<String> {
+        let key = Key::<Aes256Gcm>::from_slice(&self.encryption_key);
+        let cipher = Aes256Gcm::new(key);
+        
+        // Generate random nonce
+        let mut nonce_bytes = [0u8; 12];
+        OsRng.fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        
+        let encrypted_data = cipher.encrypt(nonce, content.as_bytes())
+            .map_err(|e| anyhow::anyhow!("Encryption failed: {}", e))?;
+        
+        // Combine nonce + encrypted data and encode as base64
+        let mut combined = Vec::with_capacity(12 + encrypted_data.len());
+        combined.extend_from_slice(&nonce_bytes);
+        combined.extend_from_slice(&encrypted_data);
+        
+        Ok(general_purpose::STANDARD.encode(&combined))
+    }
+
+    fn decrypt_content(&self, encrypted_b64: &str) -> Result<String> {
+        let combined = general_purpose::STANDARD.decode(encrypted_b64)?;
+        
+        if combined.len() < 12 {
+            return Err(anyhow::anyhow!("Invalid encrypted data"));
+        }
+        
+        let (nonce_bytes, encrypted_data) = combined.split_at(12);
+        let nonce = Nonce::from_slice(nonce_bytes);
+        
+        let key = Key::<Aes256Gcm>::from_slice(&self.encryption_key);
+        let cipher = Aes256Gcm::new(key);
+        
+        let decrypted_data = cipher.decrypt(nonce, encrypted_data)
+            .map_err(|e| anyhow::anyhow!("Decryption failed: {}", e))?;
+        
+        Ok(String::from_utf8(decrypted_data)?)
+    }
 }
 
 #[async_trait]
@@ -56,11 +159,50 @@ impl SecretGetter for AwsSecretGetter {
             .behavior_version_latest()
             .build();
 
+        let encryption_key = Self::load_or_create_key()?;
+
         Ok(Self {
             client: Client::from_conf(config),
+            encryption_key,
         })
     }
-    async fn get_secrets(&self, secret_id: &str) -> Result<serde_json::Value> {
+    
+    async fn set_secret_cache(&self, secret_id: &str, content: &str) {
+        let cache_file_path = format!("{}/{}", CACHE_DIR, secret_id);
+        print!("Setting cache for {} at {}", secret_id, cache_file_path);
+        match self.encrypt_content(content) {
+            Ok(encrypted_content) => {
+                if let Err(e) = fs::write(&cache_file_path, encrypted_content) {
+                    eprintln!("Failed to write cache file {}: {}", cache_file_path, e);
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to encrypt content for {}: {}", secret_id, e);
+            }
+        }
+    }
+    
+    async fn get_secret_cache(&self, secret_id: &str) -> Result<serde_json::Value> {
+        let cache_file_path = format!("{}/{}", CACHE_DIR, secret_id);
+        
+        if !Path::new(&cache_file_path).exists() {
+            return Err(anyhow::anyhow!("Cache file not found for secret_id: {}", secret_id));
+        }
+        
+        let encrypted_content = fs::read_to_string(&cache_file_path)?;
+        let decrypted_content = self.decrypt_content(&encrypted_content)?;
+        let secrets: serde_json::Value = serde_json::from_str(&decrypted_content)?;
+        
+        Ok(secrets)
+    }
+      async fn get_secrets(&self, secret_id: &str) -> Result<serde_json::Value> {
+        // First try to get from cache
+        if let Ok(cached_secrets) = self.get_secret_cache(secret_id).await {
+            println!("using cache for secret_id: {}", secret_id);
+            return Ok(cached_secrets);
+        }
+
+        // If not in cache, fetch from AWS
         let secret = self
             .client
             .get_secret_value()
@@ -70,7 +212,10 @@ impl SecretGetter for AwsSecretGetter {
 
         let secret_string = secret
             .secret_string()
-            .ok_or_else(|| anyhow::anyhow!("Secret string is empty".red()))?;
+            .ok_or_else(|| anyhow::anyhow!("Secret string is empty"))?;
+
+        // Cache the secret
+        self.set_secret_cache(secret_id, secret_string).await;
 
         let secrets: serde_json::Value = serde_json::from_str(&secret_string)?;
         Ok(secrets)
@@ -79,24 +224,38 @@ impl SecretGetter for AwsSecretGetter {
 
 #[derive(Parser)]
 struct Cli {
-    #[arg(long, required_unless_present = "sf")]
+    #[arg(long, required_unless_present_any = ["sf", "clear_cache"])]
     secret_id: Option<String>,
-    #[arg(long, required_unless_present = "secret_id")]
+    #[arg(long, required_unless_present_any = ["secret_id", "clear_cache"])]
     sf: Option<String>,
-    #[arg(last = true)]
+    #[arg(last = true, required_unless_present = "clear_cache")]
     command: Vec<String>,
     #[arg(long)]
     /// if supplied set or change the AWS region
     region: Option<String>,
     #[arg(long, default_value_t = false)]
-    // print fancy banner and available secret keys
+    /// print fancy banner and available secret keys
     fancy: bool,
+    #[arg(long, default_value_t = false)]
+    /// clear cache directory and encryption key, then exit
+    clear_cache: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let mut settings = Settings::new()?;
     let cli = Cli::parse();
+    
+    // Handle clear cache option first
+    if cli.clear_cache {
+        if let Err(e) = AwsSecretGetter::clear_cache() {
+            eprintln!("Failed to clear cache: {}", e);
+            std::process::exit(1);
+        }
+        println!("Cache cleared successfully");
+        return Ok(());
+    }
+    
     if cli.fancy {
         print_banner();
     }
@@ -133,7 +292,7 @@ async fn main() -> Result<()> {
         // Set environment variables from secrets
         for (key, value) in secrets
             .as_object()
-            .ok_or_else(|| anyhow::anyhow!("Secret is not a JSON object".red()))?
+            .ok_or_else(|| anyhow::anyhow!("Secret is not a JSON object"))?
         {
             if let Some(value_str) = value.as_str() {
                 if cli.fancy {

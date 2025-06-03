@@ -15,6 +15,12 @@ aws-sdk-secretsmanager = { version = "1.62.0", features = ["behavior-version-lat
 async-trait = "0.1"
 tempfile = "3.16.0"
 colored = "2"
+# Encryption
+aes-gcm = "0.10"
+rand = "0.8"
+
+# Encoding
+base64 = "0.21"
 
 [dev-dependencies]
 assert_cmd = "2.0"
