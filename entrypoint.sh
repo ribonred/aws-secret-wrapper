@@ -8,7 +8,7 @@ cd "${SCRIPT_DIR}"
 
 if [[ "$S3_CACHE_BUCKET" ]]; then
     export SCCACHE_BUCKET="$S3_CACHE_BUCKET"
-    export RUSTC_WRAPPER=sccache
+    export RUSTC_WRAPPER=/usr/local/bin/sccache
     export SCCACHE_REGION="$AWS_REGION"
 
     echo "Using sccache with bucket: $SCCACHE_BUCKET"
