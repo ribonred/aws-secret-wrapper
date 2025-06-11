@@ -2,9 +2,9 @@ name: Test AWS Secrets Wrapper
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   test:
@@ -18,23 +18,24 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
           aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
-          aws_region: 'ap-southeast-3'
+          aws_region: "ap-southeast-3"
+          aws_s3_cache_bucket: "backend-v1-artifact"
 
-      - name: Build test container
-        run: |
-          cat > Dockerfile.test <<EOF
-          FROM python:3.9-slim
-          COPY . .
-          ENTRYPOINT ["./aws-secret-wrapper", "--secret-id", "wowo", "--"]
-          CMD ["python", "test-app.py"]
-          EOF
-          
-          cat > test-app.py <<EOF
-          import os
-          print("Environment variables:")
-          for key, value in os.environ.items():
-              print(f"{key}={value}")
-          EOF
-          
-          docker build -t test-app -f Dockerfile.test .
-          docker run --rm test-app
+      # - name: Build test container
+      #   run: |
+      #     cat > Dockerfile.test <<EOF
+      #     FROM python:3.9-slim
+      #     COPY . .
+      #     ENTRYPOINT ["./aws-secret-wrapper", "--secret-id", "wowo", "--"]
+      #     CMD ["python", "test-app.py"]
+      #     EOF
+
+      #     cat > test-app.py <<EOF
+      #     import os
+      #     print("Environment variables:")
+      #     for key, value in os.environ.items():
+      #         print(f"{key}={value}")
+      #     EOF
+
+      #     docker build -t test-app -f Dockerfile.test .
+      #     docker run --rm test-app

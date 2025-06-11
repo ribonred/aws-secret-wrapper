@@ -1,20 +1,27 @@
 #!/bin/bash
 
 set -e
-
 # Get the directory where the script is located
 SCRIPT_DIR="/app"
 # Change to the action directory where Cargo.toml is located
 cd "${SCRIPT_DIR}"
-# Check if required inputs are not empty
-if [[ -z "$1" || -z "$2" || -z "$3" ]]; then
-    echo "Error: AWS_ACCESS_KEY, AWS_SECRET_KEY, and AWS_REGION must be provided."
+
+if [[ "$S3_CACHE_BUCKET" ]]; then
+    export SCCACHE_BUCKET="$S3_CACHE_BUCKET"
+    export RUSTC_WRAPPER=sccache
+    export SCCACHE_REGION="$AWS_REGION"
+
+    echo "Using sccache with bucket: $SCCACHE_BUCKET"
+fi
+if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$AWS_SECRET_ACCESS_KEY" || -z "$AWS_REGION" ]]; then
+    echo "<aws_access_key_id> <aws_secret_access_key> <aws_region>"
+    echo "Please provide all three parameters."
     exit 1
 fi
 echo "[ALL INPUTS ARE PROVIDED]"
-echo "aws_access_key: $1" > "config.yaml"
-echo "aws_secret_key: $2" >> "config.yaml"
-echo "aws_region: $3" >> "config.yaml"
+echo "aws_access_key: $AWS_ACCESS_KEY_ID" > "config.yaml"
+echo "aws_secret_key: $AWS_SECRET_ACCESS_KEY" >> "config.yaml"
+echo "aws_region: $AWS_REGION" >> "config.yaml"
 
 # Build the project
 cargo build --release

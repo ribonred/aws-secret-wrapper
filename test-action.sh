@@ -7,8 +7,9 @@ docker build -t aws-secrets-wrapper-action .
 
 # Create test environment variables
 export AWS_ACCESS_KEY="xx"
-export AWS_SECRET_KEY="xx"
+export AWS_SECRET_KEY="xxx"
 export AWS_REGION="ap-southeast-3"
+export AWS_BUCKET="some-artifact"
 export GITHUB_OUTPUT=$(pwd)/github_output
 touch $GITHUB_OUTPUT
 
@@ -21,10 +22,13 @@ echo "Running action container..."
 docker run --rm \
   -e GITHUB_WORKSPACE=$GITHUB_WORKSPACE \
   -e GITHUB_OUTPUT=$GITHUB_OUTPUT \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_KEY \
+  -e AWS_REGION=$AWS_REGION \
+  -e S3_CACHE_BUCKET=$AWS_BUCKET \
   -v $GITHUB_WORKSPACE:/github/workspace \
   -v $GITHUB_OUTPUT:$GITHUB_OUTPUT \
-  aws-secrets-wrapper-action \
-  "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$AWS_REGION"
+  aws-secrets-wrapper-action
 
 # Now test using the binary in a sample app build
 echo "Testing binary usage in app build..."
