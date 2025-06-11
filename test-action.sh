@@ -21,7 +21,7 @@ echo "Running action container..."
 docker run --rm \
   -e GITHUB_WORKSPACE=$GITHUB_WORKSPACE \
   -e GITHUB_OUTPUT=$GITHUB_OUTPUT \
-  -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+  -v $GITHUB_WORKSPACE:/github/workspace \
   -v $GITHUB_OUTPUT:$GITHUB_OUTPUT \
   aws-secrets-wrapper-action \
   "$AWS_ACCESS_KEY" "$AWS_SECRET_KEY" "$AWS_REGION"
