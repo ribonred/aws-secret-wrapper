@@ -59,6 +59,28 @@ support change region:
 aws-secret-wrapper --secret-id <SECRET_ID> --region <REGION> -- <COMMAND> [ARGS...]
 ```
 
+support file read secret id:
+
+assume your file have name `secretIds`
+
+and the content like this. it will fetch line by line and injected to env
+
+```bash
+my-secret-id-1
+```
+
+or
+
+```bash
+my-secret-id-1
+my-secret-id-2
+```
+
+
+```bash
+aws-secret-wrapper --sf <FILENAME> -- <COMMAND> [ARGS...]
+```
+
 ### Examples
 
 1. **Run a Node.js app**
@@ -78,6 +100,10 @@ aws-secret-wrapper --secret-id <SECRET_ID> --region <REGION> -- <COMMAND> [ARGS.
 4. **Run with linux runtime**
    ```bash
    ./target/release/aws-secret-wrapper --secret-id <SECRET_ID> -- printenv | grep YOUR_SECRET_KEY
+   ```
+5. **Run with linux runtime and secret id file**
+   ```bash
+   ./target/release/aws-secret-wrapper --sf <FILENAME> -- printenv | grep YOUR_SECRET_KEY
    ```
 
 ### Secret Format
